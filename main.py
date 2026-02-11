@@ -19,7 +19,7 @@ class SafeStates(StatesGroup):
     entering_pin = State()
 
 vault = {}
-user_pins = {} # {user_id:"1234"}
+user_pins = {} # {user_id: "1234"}
 
 def main_kb():
     return ReplyKeyboardMarkup(keyboard=[
@@ -32,8 +32,6 @@ def delete_kb(index: int):
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(text="❌ Удалить", callback_data=f"delete_{index}"))
     return builder.as_markup()
-
-# хендлеры
 
 @dp.message(F.text == "🔑 Установить/Сменить Пин")
 async def set_pin_start(message: Message, state: FSMContext):
@@ -48,19 +46,18 @@ async def set_pin_process(message: Message, state: FSMContext):
         await state.clear()
     else:
         await message.answer("⚠️ Пин должен состоять ровно из 4 цифр")
-        
 
 @dp.message(F.text == "📂 Посмотреть всё")
 async def check_pin_before_show(message: Message, state: FSMContext):
     user_id = message.from_user.id
-    
     if user_id in user_pins:
         await message.answer("🔒 Введите ваш Пин-код для доступа к сейфу:")
         await state.set_state(SafeStates.entering_pin)
     else:
         await show_all_logic(message)
 
-@dp.message(SafeStates.entering_pin)
+# F.text.regexp(r'^\d+$')
+@dp.message(SafeStates.entering_pin, F.text.regexp(r'^\d+$'))
 async def verify_pin_process(message: Message, state: FSMContext):
     user_id = message.from_user.id
     if message.text == user_pins.get(user_id):
@@ -73,15 +70,12 @@ async def verify_pin_process(message: Message, state: FSMContext):
 async def show_all_logic(message: Message):
     user_id = message.from_user.id
     items = vault.get(user_id, [])
-    
     if not items:
         await message.answer("В сейфе пусто.")
         return
-
     for idx, item in enumerate(items):
         kb = delete_kb(idx)
         content = item["content"]
-
         if item["type"] == "text":
             await message.answer(f"📝 Запись №{idx+1}:\n`{content}`", parse_mode="Markdown", reply_markup=kb)
         elif item["type"] == "photo":
@@ -95,7 +89,6 @@ async def show_all_logic(message: Message):
         elif item["type"] == "document":
             await message.answer_document(content, caption=f"📄 Документ №{idx+1}", reply_markup=kb)
 
-
 @dp.message(Command("start"))
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
@@ -107,12 +100,10 @@ async def add_start(message: Message, state: FSMContext):
     await state.set_state(SafeStates.waiting_for_content)
 
 @dp.message(SafeStates.waiting_for_content)
-@dp.message(SafeStates.waiting_for_content)
 async def process_save(message: Message, state: FSMContext):
     user_id = message.from_user.id
     if user_id not in vault: 
         vault[user_id] = []
-        
     if message.text:
         vault[user_id].append({"type": "text", "content": message.text})
     elif message.photo:
@@ -128,7 +119,6 @@ async def process_save(message: Message, state: FSMContext):
     else:
         await message.answer("❌ Этот тип файла я не умею хранить.")
         return
-    
     await message.answer("✅ Сохранено в сейф!", reply_markup=main_kb())
     await state.clear()
 
@@ -150,7 +140,7 @@ async def main():
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-
     asyncio.run(main())
+
 
 
