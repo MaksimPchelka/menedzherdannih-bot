@@ -7,7 +7,7 @@ from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, InlineKe
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 import os
 
-TOKEN = os.getenv("BOT_TOKEN") or os.getenv("TOKEN") or "8532055151:AAF0-Qp9z_141FCdMht17SDggNfYfURGIg4"
+TOKEN = os.getenv("BOT_TOKEN") or os.getenv("TOKEN")
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -151,3 +151,4 @@ async def main():
 if __name__ == "__main__":
 
     asyncio.run(main())
+
