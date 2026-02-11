@@ -97,7 +97,8 @@ async def show_all_logic(message: Message):
 
 
 @dp.message(Command("start"))
-async def cmd_start(message: Message):
+async def cmd_start(message: Message, state: FSMContext):
+    await state.clear()
     await message.answer("🔐 Бот активирован. Используйте меню ниже", reply_markup=main_kb())
 
 @dp.message(F.text == "🔒 Сохранить")
@@ -151,4 +152,5 @@ async def main():
 if __name__ == "__main__":
 
     asyncio.run(main())
+
 
