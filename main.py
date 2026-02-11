@@ -12,18 +12,14 @@ TOKEN = os.getenv("BOT_TOKEN") or os.getenv("TOKEN") or "8532055151:AAF0-Qp9z_14
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# Состояния
 class SafeStates(StatesGroup):
     waiting_for_content = State()
     waiting_for_search = State()
-    setting_pin = State()        # Для создания пина
-    entering_pin = State()       # Для проверки пина перед просмотром
+    setting_pin = State()
+    entering_pin = State()
 
-# Хранилища (в памяти)
 vault = {}
-user_pins = {} # {user_id: "1234"}
-
-# --- КЛАВИАТУРЫ ---
+user_pins = {} # {user_id:"1234"}
 
 def main_kb():
     return ReplyKeyboardMarkup(keyboard=[
@@ -37,7 +33,7 @@ def delete_kb(index: int):
     builder.row(InlineKeyboardButton(text="❌ Удалить", callback_data=f"delete_{index}"))
     return builder.as_markup()
 
-# --- ХЕНДЛЕРЫ ПИН-КОДА ---
+# хендлеры
 
 @dp.message(F.text == "🔑 Установить/Сменить Пин")
 async def set_pin_start(message: Message, state: FSMContext):
@@ -52,19 +48,16 @@ async def set_pin_process(message: Message, state: FSMContext):
         await state.clear()
     else:
         await message.answer("⚠️ Пин должен состоять ровно из 4 цифр")
-
-# --- ПРОСМОТР С ПРОВЕРКОЙ ---
+        
 
 @dp.message(F.text == "📂 Посмотреть всё")
 async def check_pin_before_show(message: Message, state: FSMContext):
     user_id = message.from_user.id
     
-    # Если у юзера установлен пин, просим его ввести
     if user_id in user_pins:
         await message.answer("🔒 Введите ваш Пин-код для доступа к сейфу:")
         await state.set_state(SafeStates.entering_pin)
     else:
-        # Если пина нет, сразу показываем
         await show_all_logic(message)
 
 @dp.message(SafeStates.entering_pin)
@@ -73,11 +66,10 @@ async def verify_pin_process(message: Message, state: FSMContext):
     if message.text == user_pins.get(user_id):
         await message.answer("🔓 Доступ разрешен!")
         await state.clear()
-        await show_all_logic(message) # Вызываем показ заметок
+        await show_all_logic(message)
     else:
         await message.answer("❌ Неверный Пин! Попробуйте еще раз или отмените действие")
 
-# Вынес логику показа в отдельную функцию, чтобы не дублировать код
 async def show_all_logic(message: Message):
     user_id = message.from_user.id
     items = vault.get(user_id, [])
@@ -89,8 +81,7 @@ async def show_all_logic(message: Message):
     for idx, item in enumerate(items):
         kb = delete_kb(idx)
         content = item["content"]
-        
-        # Выбираем метод отправки в зависимости от типа
+
         if item["type"] == "text":
             await message.answer(f"📝 Запись №{idx+1}:\n`{content}`", parse_mode="Markdown", reply_markup=kb)
         elif item["type"] == "photo":
@@ -104,7 +95,6 @@ async def show_all_logic(message: Message):
         elif item["type"] == "document":
             await message.answer_document(content, caption=f"📄 Документ №{idx+1}", reply_markup=kb)
 
-# --- ОСТАЛЬНЫЕ ХЕНДЛЕРЫ (БЕЗ ИЗМЕНЕНИЙ) ---
 
 @dp.message(Command("start"))
 async def cmd_start(message: Message):
@@ -121,8 +111,7 @@ async def process_save(message: Message, state: FSMContext):
     user_id = message.from_user.id
     if user_id not in vault: 
         vault[user_id] = []
-
-    # Проверяем разные типы контента
+        
     if message.text:
         vault[user_id].append({"type": "text", "content": message.text})
     elif message.photo:
@@ -136,7 +125,7 @@ async def process_save(message: Message, state: FSMContext):
     elif message.document:
         vault[user_id].append({"type": "document", "content": message.document.file_id})
     else:
-        await message.answer("❌ Этот тип файла я пока не умею хранить.")
+        await message.answer("❌ Этот тип файла я не умею хранить.")
         return
     
     await message.answer("✅ Сохранено в сейф!", reply_markup=main_kb())
@@ -160,4 +149,5 @@ async def main():
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
+
     asyncio.run(main())
